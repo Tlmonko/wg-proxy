@@ -31,7 +31,12 @@ fi
 wg-quick up "$WG_IFACE"
 
 if [[ -z "$WG_CLIENT_EGRESS_IFACE" ]]; then
-  WG_CLIENT_EGRESS_IFACE="$(ip -4 route get "$WG_CLIENT_GATEWAY_IP" | awk '/dev/ {for (i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')"
+  # On container startup docker routes may appear slightly later.
+  for _ in $(seq 1 30); do
+    WG_CLIENT_EGRESS_IFACE="$(ip -4 route get "$WG_CLIENT_GATEWAY_IP" 2>/dev/null | awk '/dev/ {for (i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')"
+    [[ -n "$WG_CLIENT_EGRESS_IFACE" ]] && break
+    sleep 1
+  done
 fi
 
 if [[ -z "$WG_CLIENT_EGRESS_IFACE" ]]; then
@@ -42,7 +47,10 @@ fi
 
 # Route traffic from bot-created peers to egress container (#2).
 ip route replace "$WG_SUBNET" dev "$WG_IFACE" || true
-ip route replace default via "$WG_CLIENT_GATEWAY_IP" dev "$WG_CLIENT_EGRESS_IFACE" table 51820
+# Avoid intermittent "Nexthop has invalid gateway" by letting kernel resolve the
+# proper L2 path first; fall back to explicit dev when needed.
+ip route replace default via "$WG_CLIENT_GATEWAY_IP" table 51820 \
+  || ip route replace default via "$WG_CLIENT_GATEWAY_IP" dev "$WG_CLIENT_EGRESS_IFACE" table 51820
 ip rule add from "$WG_SUBNET" lookup 51820 priority 100 2>/dev/null || true
 
 iptables -A FORWARD -i "$WG_IFACE" -o "$WG_CLIENT_EGRESS_IFACE" -j ACCEPT

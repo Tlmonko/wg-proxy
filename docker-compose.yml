@@ -41,6 +41,10 @@ services:
       # Optional pass-through webhook vars (set in .env if needed)
       WEBHOOK_PATH: ${WEBHOOK_PATH:-/webhook}
       WEBHOOK_PORT: ${WEBHOOK_PORT:-8081}
+      # Common listen-host env names used by webhook bots/frameworks.
+      WEBHOOK_LISTEN_HOST: ${WEBHOOK_LISTEN_HOST:-0.0.0.0}
+      WEBAPP_HOST: ${WEBAPP_HOST:-0.0.0.0}
+      APP_HOST: ${APP_HOST:-0.0.0.0}
 
       # --- WireGuard server in container #1 ---
       WG_SERVER_INTERFACE: ${WG_SERVER_INTERFACE:-wg0}

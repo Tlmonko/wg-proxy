@@ -1,40 +1,44 @@
 # wg-proxy
 
-`docker-compose.yml` поднимает двухконтейнерную схему:
+Этот репозиторий поднимает цепочку из **3 сервисов**:
 
-1. `vpn-bot-server` — контейнер с ботом `wg-vpn-tg-bot` и WireGuard сервером для пользователей.
-2. `wg-egress-client` — отдельный контейнер WireGuard клиента, подключенного к стороннему WG.
+1. `vpn-bot-server` — контейнер с кодом `wg-vpn-tg-bot` + WireGuard сервер для клиентов.
+2. `wg-egress-client` — контейнер WireGuard клиента к стороннему WG серверу.
+3. `traefik` — reverse proxy (для HTTP/webhook части бота, если используется).
 
-Трафик клиентов, которых создает бот:
+Схема трафика WG-клиентов:
 
-`user peer -> vpn-bot-server (WG server) -> wg-egress-client -> внешний WG сервер`
+`peer user -> vpn-bot-server (WG server) -> wg-egress-client -> внешний WG сервер`
+
+## Почему теперь есть Dockerfile
+
+Ранее сборка падала, потому что `docker-compose.yml` пытался собрать репозиторий бота напрямую, а в нём нет `Dockerfile`.
+
+Теперь используется **локальный `Dockerfile`**:
+- он клонирует `wg-vpn-tg-bot` по `BOT_REPO`/`BOT_REF`,
+- ставит зависимости Python,
+- содержит нужные сетевые утилиты (wireguard-tools/iptables/iproute2).
 
 ## Подготовка
 
-1. Скопируйте переменные окружения:
+1. Скопируйте env:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Заполните `.env`:
+2. Заполните `.env` минимум:
 - `BOT_TOKEN`, `ADMIN_ID`
 - `WG_SERVER_PRIVATE_KEY`
-- при необходимости поменяйте подсети и порты
+- `WG_CLIENT_CONFIG_PATH` (файл клиента внешнего WireGuard)
 
-3. Укажите, какой конфиг внешнего WG монтировать в контейнер 2:
+3. Положите конфиг внешнего WG клиента (контейнер 2), например:
 
-- В `.env` задайте `WG_CLIENT_CONFIG_PATH` (по умолчанию `./config/wg-client/wg-egress.conf`).
-- Внутрь контейнера файл попадёт как `/etc/wireguard/${WG_CLIENT_INTERFACE}.conf`.
+`./config/wg-client/wg-egress.conf`
 
-Пример:
+Этот файл будет смонтирован как:
 
-```env
-WG_CLIENT_INTERFACE=wg-egress
-WG_CLIENT_CONFIG_PATH=./config/wg-client/wg-egress.conf
-```
-
-То есть конфиг подключения к стороннему WG-серверу нужно хранить на хосте по пути из `WG_CLIENT_CONFIG_PATH`.
+`/etc/wireguard/${WG_CLIENT_INTERFACE}.conf`
 
 ## Запуск
 
@@ -42,8 +46,22 @@ WG_CLIENT_CONFIG_PATH=./config/wg-client/wg-egress.conf
 docker compose up -d --build
 ```
 
+## Traefik
+
+Traefik включён в compose и проксирует HTTP-сервис бота по host-правилу:
+
+- `Host(${TRAEFIK_BOT_HOST})`
+- entrypoint `web` (порт `80`)
+
+По умолчанию:
+- HTTP: `:80`
+- Dashboard Traefik: `:8080`
+
+> Если ваш бот работает только через long polling и не поднимает HTTP endpoint/webhook,
+> Traefik не мешает работе WG-схемы и может быть оставлен как инфраструктурный reverse proxy.
+
 ## Важные замечания
 
-- Контейнер `vpn-bot-server` запускается в привилегированном режиме, так как WireGuard и маршрутизация требуют `NET_ADMIN`/`SYS_MODULE`.
-- Контейнер `wg-egress-client` выполняет NAT (`MASQUERADE`) в сторону внешнего WG туннеля.
-- Для продакшена рекомендуется заменить `build` на фиксированный image tag вашего бота.
+- `vpn-bot-server` работает с `NET_ADMIN`/`SYS_MODULE` и `privileged: true` из-за WG и routing.
+- `wg-egress-client` делает `MASQUERADE` исходящего трафика в внешний WG тоннель.
+- В проде лучше зафиксировать `BOT_REF` на tag/commit, а не `main`.

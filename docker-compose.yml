@@ -1,10 +1,29 @@
-version: "3.9"
-
 services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxy
+    restart: unless-stopped
+
   vpn-bot-server:
     container_name: vpn-bot-server
     build:
-      context: https://github.com/WoodieDudy/wg-vpn-tg-bot.git#main
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BOT_REPO: ${BOT_REPO:-https://github.com/WoodieDudy/wg-vpn-tg-bot.git}
+        BOT_REF: ${BOT_REF:-main}
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -13,18 +32,19 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
     environment:
-      # --- Bot environment ---
+      # --- Bot env ---
       BOT_TOKEN: ${BOT_TOKEN}
       ADMIN_ID: ${ADMIN_ID}
+      BOT_HTTP_PORT: ${BOT_HTTP_PORT:-8081}
 
-      # --- WireGuard server settings inside container #1 ---
+      # --- WireGuard server in container #1 ---
       WG_SERVER_INTERFACE: ${WG_SERVER_INTERFACE:-wg0}
       WG_SERVER_PORT: ${WG_SERVER_PORT:-51820}
       WG_SERVER_SUBNET: ${WG_SERVER_SUBNET:-10.66.0.0/24}
       WG_SERVER_ADDRESS: ${WG_SERVER_ADDRESS:-10.66.0.1/24}
       WG_SERVER_PRIVATE_KEY: ${WG_SERVER_PRIVATE_KEY}
 
-      # Traffic from WG users in container #1 will be routed to container #2
+      # Route user subnet from container #1 to container #2
       WG_CLIENT_GATEWAY_IP: ${WG_CLIENT_GATEWAY_IP:-172.30.0.2}
       WG_CLIENT_EGRESS_IFACE: ${WG_CLIENT_EGRESS_IFACE:-eth0}
     ports:
@@ -32,12 +52,19 @@ services:
     volumes:
       - ./config/wg-server:/etc/wireguard
       - ./scripts/container1-entrypoint.sh:/usr/local/bin/container1-entrypoint.sh:ro
-    entrypoint: ["/bin/sh", "/usr/local/bin/container1-entrypoint.sh"]
+    entrypoint: ["/bin/bash", "/usr/local/bin/container1-entrypoint.sh"]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.vpn-bot.rule=Host(`${TRAEFIK_BOT_HOST:-bot.local}`)
+      - traefik.http.routers.vpn-bot.entrypoints=web
+      - traefik.http.services.vpn-bot.loadbalancer.server.port=${BOT_HTTP_PORT:-8081}
     networks:
       transit:
         ipv4_address: 172.30.0.10
+      proxy:
     depends_on:
       - wg-egress-client
+      - traefik
     restart: unless-stopped
 
   wg-egress-client:
@@ -48,8 +75,6 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
     volumes:
-      # Укажите путь к клиентскому конфигу внешнего WG-сервера через WG_CLIENT_CONFIG_PATH.
-      # По умолчанию: ./config/wg-client/wg-egress.conf -> /etc/wireguard/${WG_CLIENT_INTERFACE}.conf
       - ${WG_CLIENT_CONFIG_PATH:-./config/wg-client/wg-egress.conf}:/etc/wireguard/${WG_CLIENT_INTERFACE:-wg-egress}.conf:ro
       - ./scripts/container2-entrypoint.sh:/usr/local/bin/container2-entrypoint.sh:ro
     entrypoint: ["/bin/sh", "/usr/local/bin/container2-entrypoint.sh"]
@@ -64,3 +89,5 @@ networks:
     ipam:
       config:
         - subnet: 172.30.0.0/24
+  proxy:
+    driver: bridge

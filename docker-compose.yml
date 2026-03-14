@@ -36,6 +36,11 @@ services:
       BOT_TOKEN: ${BOT_TOKEN}
       ADMIN_IDS: ${ADMIN_IDS}
       BOT_HTTP_PORT: ${BOT_HTTP_PORT:-8081}
+      # Required by wg-vpn-tg-bot webhook mode
+      WEBHOOK_HOST: ${WEBHOOK_HOST:-https://bot.local}
+      # Optional pass-through webhook vars (set in .env if needed)
+      WEBHOOK_PATH: ${WEBHOOK_PATH:-/webhook}
+      WEBHOOK_PORT: ${WEBHOOK_PORT:-8081}
 
       # --- WireGuard server in container #1 ---
       WG_SERVER_INTERFACE: ${WG_SERVER_INTERFACE:-wg0}

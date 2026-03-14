@@ -22,11 +22,19 @@ cp .env.example .env
 - `WG_SERVER_PRIVATE_KEY`
 - при необходимости поменяйте подсети и порты
 
-3. Положите конфиг клиента внешнего WG в:
+3. Укажите, какой конфиг внешнего WG монтировать в контейнер 2:
 
-`./config/wg-client/wg-egress.conf`
+- В `.env` задайте `WG_CLIENT_CONFIG_PATH` (по умолчанию `./config/wg-client/wg-egress.conf`).
+- Внутрь контейнера файл попадёт как `/etc/wireguard/${WG_CLIENT_INTERFACE}.conf`.
 
-(имя интерфейса по умолчанию: `wg-egress`, можно изменить через `WG_CLIENT_INTERFACE`).
+Пример:
+
+```env
+WG_CLIENT_INTERFACE=wg-egress
+WG_CLIENT_CONFIG_PATH=./config/wg-client/wg-egress.conf
+```
+
+То есть конфиг подключения к стороннему WG-серверу нужно хранить на хосте по пути из `WG_CLIENT_CONFIG_PATH`.
 
 ## Запуск
 

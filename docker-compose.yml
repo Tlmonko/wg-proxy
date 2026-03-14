@@ -48,7 +48,9 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
     volumes:
-      - ./config/wg-client:/etc/wireguard
+      # Укажите путь к клиентскому конфигу внешнего WG-сервера через WG_CLIENT_CONFIG_PATH.
+      # По умолчанию: ./config/wg-client/wg-egress.conf -> /etc/wireguard/${WG_CLIENT_INTERFACE}.conf
+      - ${WG_CLIENT_CONFIG_PATH:-./config/wg-client/wg-egress.conf}:/etc/wireguard/${WG_CLIENT_INTERFACE:-wg-egress}.conf:ro
       - ./scripts/container2-entrypoint.sh:/usr/local/bin/container2-entrypoint.sh:ro
     entrypoint: ["/bin/sh", "/usr/local/bin/container2-entrypoint.sh"]
     networks:

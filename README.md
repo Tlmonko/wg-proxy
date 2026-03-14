@@ -31,6 +31,7 @@ cp .env.example .env
 - `BOT_TOKEN`, `ADMIN_IDS`
 - `WG_SERVER_PRIVATE_KEY`
 - `WG_CLIENT_CONFIG_PATH` (файл клиента внешнего WireGuard)
+- `WG_CLIENT_GATEWAY_IP` (IP контейнера egress-клиента, обычно `172.30.0.2`)
 
 3. Положите конфиг внешнего WG клиента (контейнер 2), например:
 
@@ -39,6 +40,8 @@ cp .env.example .env
 Этот файл будет смонтирован как:
 
 `/etc/wireguard/${WG_CLIENT_INTERFACE}.conf`
+
+`WG_CLIENT_EGRESS_IFACE` можно оставить пустым: интерфейс до `WG_CLIENT_GATEWAY_IP` определяется автоматически (это устраняет ошибку `Nexthop has invalid gateway` при изменении порядка docker-сетей).
 
 ## Запуск
 

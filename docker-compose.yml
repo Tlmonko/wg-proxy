@@ -34,7 +34,7 @@ services:
     environment:
       # --- Bot env ---
       BOT_TOKEN: ${BOT_TOKEN}
-      ADMIN_ID: ${ADMIN_ID}
+      ADMIN_IDS: ${ADMIN_IDS}
       BOT_HTTP_PORT: ${BOT_HTTP_PORT:-8081}
 
       # --- WireGuard server in container #1 ---

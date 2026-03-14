@@ -28,7 +28,7 @@ cp .env.example .env
 ```
 
 2. Заполните `.env` минимум:
-- `BOT_TOKEN`, `ADMIN_ID`
+- `BOT_TOKEN`, `ADMIN_IDS`
 - `WG_SERVER_PRIVATE_KEY`
 - `WG_CLIENT_CONFIG_PATH` (файл клиента внешнего WireGuard)
 

@@ -45,6 +45,10 @@ cp .env.example .env
 
 `WG_CLIENT_EGRESS_IFACE` можно оставить пустым: интерфейс до `WG_CLIENT_GATEWAY_IP` определяется автоматически (это устраняет ошибку `Nexthop has invalid gateway` при изменении порядка docker-сетей).
 
+Для `wg-egress-client` startup-скрипт автоматически создаёт runtime-конфиг (`/run/wireguard/*.conf`),
+убирает `DNS=` и добавляет `Table = off`, чтобы избежать типичных ошибок контейнерной среды:
+`could not detect a useable init system` и `sysctl ... src_valid_mark ... Read-only file system`.
+
 ## Запуск
 
 ```bash

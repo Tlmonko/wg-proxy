@@ -83,6 +83,10 @@ services:
       - NET_ADMIN
     sysctls:
       - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    environment:
+      WG_CLIENT_INTERFACE: ${WG_CLIENT_INTERFACE:-wg-egress}
+      WG_SERVER_SUBNET: ${WG_SERVER_SUBNET:-10.66.0.0/24}
     volumes:
       - ${WG_CLIENT_CONFIG_PATH:-./config/wg-client/wg-egress.conf}:/etc/wireguard/${WG_CLIENT_INTERFACE:-wg-egress}.conf:ro
       - ./scripts/container2-entrypoint.sh:/usr/local/bin/container2-entrypoint.sh:ro

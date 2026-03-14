@@ -7,11 +7,20 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
     ports:
       - "80:80"
+      - "443:443"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
     networks:
       - proxy
     restart: unless-stopped
@@ -37,7 +46,7 @@ services:
       ADMIN_IDS: ${ADMIN_IDS}
       BOT_HTTP_PORT: ${BOT_HTTP_PORT:-8081}
       # Required by wg-vpn-tg-bot webhook mode
-      WEBHOOK_HOST: ${WEBHOOK_HOST:-https://bot.local}
+      WEBHOOK_HOST: ${WEBHOOK_HOST}
       # Optional pass-through webhook vars (set in .env if needed)
       WEBHOOK_PATH: ${WEBHOOK_PATH:-/webhook}
       WEBHOOK_PORT: ${WEBHOOK_PORT:-8081}
@@ -64,8 +73,10 @@ services:
     entrypoint: ["/bin/bash", "/usr/local/bin/container1-entrypoint.sh"]
     labels:
       - traefik.enable=true
-      - traefik.http.routers.vpn-bot.rule=Host(`${TRAEFIK_BOT_HOST:-bot.local}`)
-      - traefik.http.routers.vpn-bot.entrypoints=web
+      - traefik.http.routers.vpn-bot.rule=Host(`${TRAEFIK_BOT_HOST}`)
+      - traefik.http.routers.vpn-bot.entrypoints=websecure
+      - traefik.http.routers.vpn-bot.tls=true
+      - traefik.http.routers.vpn-bot.tls.certresolver=letsencrypt
       - traefik.http.services.vpn-bot.loadbalancer.server.port=${BOT_HTTP_PORT:-8081}
     networks:
       transit:

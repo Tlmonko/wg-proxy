@@ -4,7 +4,7 @@
 
 1. `vpn-bot-server` — контейнер с кодом `wg-vpn-tg-bot` + WireGuard сервер для клиентов.
 2. `wg-egress-client` — контейнер WireGuard клиента к стороннему WG серверу.
-3. `traefik` — reverse proxy (для HTTP/webhook части бота, если используется).
+3. `traefik` — reverse proxy + TLS termination + Let's Encrypt.
 
 Схема трафика WG-клиентов:
 
@@ -29,13 +29,24 @@ cp .env.example .env
 
 2. Заполните `.env` минимум:
 - `BOT_TOKEN`, `ADMIN_IDS`
-- `WEBHOOK_HOST` (обязателен для этого бота, например `https://vpn.example.com`)
-- при проблемах с доступностью webhook через Traefik: `WEBHOOK_LISTEN_HOST=0.0.0.0`
+- `TRAEFIK_BOT_HOST` (публичный домен, например `wg.example.com`)
+- `WEBHOOK_HOST` (обязателен для этого бота, строго `https://<ваш_домен>`)
+- `LETSENCRYPT_EMAIL` (email для ACME/Let's Encrypt)
 - `WG_SERVER_PRIVATE_KEY`
 - `WG_CLIENT_CONFIG_PATH` (файл клиента внешнего WireGuard)
 - `WG_CLIENT_GATEWAY_IP` (IP контейнера egress-клиента, обычно `172.30.0.2`)
 
-3. Положите конфиг внешнего WG клиента (контейнер 2), например:
+3. Убедитесь, что DNS домена (`TRAEFIK_BOT_HOST`) указывает на этот сервер, и открыты порты `80/tcp` и `443/tcp`.
+
+4. Подготовьте хранилище сертификатов Let's Encrypt:
+
+```bash
+mkdir -p letsencrypt
+touch letsencrypt/acme.json
+chmod 600 letsencrypt/acme.json
+```
+
+5. Положите конфиг внешнего WG клиента (контейнер 2), например:
 
 `./config/wg-client/wg-egress.conf`
 
@@ -55,27 +66,19 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-## Traefik
+## TLS / Webhook (Traefik + Let's Encrypt)
 
-Traefik включён в compose и проксирует HTTP-сервис бота по host-правилу:
+Traefik в `docker-compose.yml` настроен так:
+- слушает `:80` и `:443`;
+- делает редирект `HTTP -> HTTPS`;
+- получает сертификат через Let's Encrypt (ACME HTTP challenge);
+- роутит `Host(${TRAEFIK_BOT_HOST})` в `vpn-bot-server` по `websecure`.
 
-- `Host(${TRAEFIK_BOT_HOST})` для маршрутизации внутрь контейнера бота
-- entrypoint `web` (порт `80`)
+Это соответствует требованию бота/Telegram: `WEBHOOK_HOST` должен быть HTTPS URL.
 
-По умолчанию:
-- HTTP: `:80`
-- Dashboard Traefik: `:8080`
-
-> Важно: `wg-vpn-tg-bot` в webhook-режиме требует `WEBHOOK_HOST` в формате `https://...`.
-> Если Traefik у вас без TLS (как в этом примере), TLS должен терминироваться внешним прокси/балансером,
-> а в `WEBHOOK_HOST` указывается внешний HTTPS-домен.
->
 > Если в логах бота видно `Running on http://127.0.0.1:8081`, задайте в `.env`
 > `WEBHOOK_LISTEN_HOST=0.0.0.0` (а также при необходимости `WEBAPP_HOST`/`APP_HOST`),
 > чтобы сервис был доступен Traefik из docker-сети.
-
-> Если ваш бот работает только через long polling и не поднимает HTTP endpoint/webhook,
-> Traefik не мешает работе WG-схемы и может быть оставлен как инфраструктурный reverse proxy.
 
 ## Важные замечания
 

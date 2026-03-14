@@ -31,6 +31,7 @@ cp .env.example .env
 - `BOT_TOKEN`, `ADMIN_IDS`
 - `TRAEFIK_BOT_HOST` (публичный домен, например `wg.example.com`)
 - `WEBHOOK_HOST` (обязателен для этого бота, строго `https://<ваш_домен>`)
+- `PROXY_BIND_IP` (обычно `172.31.0.10`, для проброса loopback webhook наружу)
 - `LETSENCRYPT_EMAIL` (email для ACME/Let's Encrypt)
 - `WG_SERVER_PRIVATE_KEY`
 - `WG_CLIENT_CONFIG_PATH` (файл клиента внешнего WireGuard)
@@ -72,9 +73,13 @@ Traefik в `docker-compose.yml` настроен так:
 - слушает `:80` и `:443`;
 - делает редирект `HTTP -> HTTPS`;
 - получает сертификат через Let's Encrypt (ACME HTTP challenge);
-- роутит `Host(${TRAEFIK_BOT_HOST})` в `vpn-bot-server` по `websecure`.
+- роутит `Host(${TRAEFIK_BOT_HOST})` в `vpn-bot-server` по `websecure` и использует сеть `proxy` (`traefik.docker.network=proxy`).
 
 Это соответствует требованию бота/Telegram: `WEBHOOK_HOST` должен быть HTTPS URL.
+
+Дополнительно включён bridge внутри `vpn-bot-server`: если бот слушает только `127.0.0.1:8081`,
+скрипт публикует этот порт на `PROXY_BIND_IP` (по умолчанию `172.31.0.10`) через `socat`,
+чтобы Traefik стабильно доставлял webhook в контейнер.
 
 > Если в логах бота видно `Running on http://127.0.0.1:8081`, задайте в `.env`
 > `WEBHOOK_LISTEN_HOST=0.0.0.0` (а также при необходимости `WEBAPP_HOST`/`APP_HOST`),

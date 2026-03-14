@@ -9,6 +9,8 @@ WG_SUBNET="${WG_SERVER_SUBNET:-10.66.0.0/24}"
 WG_CLIENT_GATEWAY_IP="${WG_CLIENT_GATEWAY_IP:-172.30.0.2}"
 # optional override; if empty script auto-detects iface to gateway
 WG_CLIENT_EGRESS_IFACE="${WG_CLIENT_EGRESS_IFACE:-}"
+BOT_HTTP_PORT="${BOT_HTTP_PORT:-8081}"
+PROXY_BIND_IP="${PROXY_BIND_IP:-172.31.0.10}"
 
 mkdir -p /etc/wireguard
 chmod 700 /etc/wireguard
@@ -60,22 +62,26 @@ echo "WG routing configured: ${WG_SUBNET} -> via ${WG_CLIENT_GATEWAY_IP} dev ${W
 
 cd /app
 
+BOT_CMD=()
 if [[ -x /docker-entrypoint.sh ]]; then
-  exec /docker-entrypoint.sh
-fi
-
-if [[ -f main.py ]]; then
-  exec python main.py
-fi
-
-if [[ -f bot.py ]]; then
-  exec python bot.py
-fi
-
-if compgen -G "*.py" >/dev/null; then
+  BOT_CMD=(/docker-entrypoint.sh)
+elif [[ -f main.py ]]; then
+  BOT_CMD=(python main.py)
+elif [[ -f bot.py ]]; then
+  BOT_CMD=(python bot.py)
+elif compgen -G "*.py" >/dev/null; then
   first_py=$(ls -1 *.py | head -n1)
-  exec python "$first_py"
+  BOT_CMD=(python "$first_py")
+else
+  echo "Cannot find bot стартовый файл in /app (expected main.py/bot.py)" >&2
+  exec tail -f /dev/null
 fi
 
-echo "Cannot find bot стартовый файл in /app (expected main.py/bot.py)" >&2
-exec tail -f /dev/null
+# Some bot versions bind webhook server to 127.0.0.1 only.
+# Expose that loopback listener on proxy network IP so Traefik can reach it.
+if command -v socat >/dev/null 2>&1; then
+  socat "TCP-LISTEN:${BOT_HTTP_PORT},bind=${PROXY_BIND_IP},fork,reuseaddr" "TCP:127.0.0.1:${BOT_HTTP_PORT}" >/tmp/socat-webhook.log 2>&1 &
+  echo "Webhook bridge enabled: ${PROXY_BIND_IP}:${BOT_HTTP_PORT} -> 127.0.0.1:${BOT_HTTP_PORT}" >&2
+fi
+
+exec "${BOT_CMD[@]}"

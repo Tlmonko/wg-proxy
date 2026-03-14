@@ -22,7 +22,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
     networks:
-      - proxy
+      proxy:
+        ipv4_address: 172.31.0.2
     restart: unless-stopped
 
   vpn-bot-server:
@@ -54,6 +55,8 @@ services:
       WEBHOOK_LISTEN_HOST: ${WEBHOOK_LISTEN_HOST:-0.0.0.0}
       WEBAPP_HOST: ${WEBAPP_HOST:-0.0.0.0}
       APP_HOST: ${APP_HOST:-0.0.0.0}
+      # Bridge bot loopback listener to proxy network IP if bot binds 127.0.0.1 only.
+      PROXY_BIND_IP: ${PROXY_BIND_IP:-172.31.0.10}
 
       # --- WireGuard server in container #1 ---
       WG_SERVER_INTERFACE: ${WG_SERVER_INTERFACE:-wg0}
@@ -73,6 +76,7 @@ services:
     entrypoint: ["/bin/bash", "/usr/local/bin/container1-entrypoint.sh"]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=proxy
       - traefik.http.routers.vpn-bot.rule=Host(`${TRAEFIK_BOT_HOST}`)
       - traefik.http.routers.vpn-bot.entrypoints=websecure
       - traefik.http.routers.vpn-bot.tls=true
@@ -82,6 +86,7 @@ services:
       transit:
         ipv4_address: 172.30.0.10
       proxy:
+        ipv4_address: 172.31.0.10
     depends_on:
       - wg-egress-client
       - traefik
@@ -115,3 +120,6 @@ networks:
         - subnet: 172.30.0.0/24
   proxy:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24

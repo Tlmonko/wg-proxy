@@ -37,7 +37,7 @@ def load_settings() -> Settings:
         initial_admin_ids=_parse_admin_ids(os.getenv('ADMIN_IDS', '')),
         data_dir=os.getenv('DATA_DIR', '/data'),
         admins_file=os.path.join(os.getenv('DATA_DIR', '/data'), 'admins.json'),
-        wg_config_file=os.getenv('WG_CONFIG_FILE', '/config/wg0.conf'),
+        wg_config_file=os.getenv('WG_CONFIG_FILE', '/config/wg_confs/wg0.conf'),
         clients_dir=os.getenv('CLIENTS_DIR', '/clients'),
         wg_interface=os.getenv('WG_INTERFACE', 'wg0'),
         wg_endpoint=os.environ['WG_ENDPOINT'],

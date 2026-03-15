@@ -8,9 +8,10 @@
 
 ## Структура
 
-- `upstream/` — docker-compose и `wg0.conf` для upstream.
-- `bridge/config/` — конфиг bridge WireGuard (`wg0.conf`).
+- `upstream/` — docker-compose и серверный конфиг `config/wg_confs/wg0.conf` для upstream.
+- `bridge/config/` — серверный конфиг bridge WireGuard (`wg_confs/wg0.conf`).
 - `bridge/clients/` — клиентские `.conf`, создаваемые ботом.
+- `bridge/config/wg_confs/` и `upstream/config/wg_confs/` — только серверные live tunnel configs WireGuard.
 - `bridge/bot-data/` — JSON-хранилище админов Telegram-бота.
 - `bridge/bot/` — минималистичный Telegram-бот управления managed-клиентами.
 
@@ -20,12 +21,14 @@
 
 Ключевая особенность этой реализации:
 
-1. бот изменяет `bridge/config/wg0.conf`;
+1. бот изменяет `bridge/config/wg_confs/wg0.conf`;
 2. затем делает live reload без рестарта контейнера:
    - `wg-quick strip <WG_CONFIG_FILE>`
    - `wg syncconf <WG_INTERFACE> /dev/stdin`
 
 Новые пользователи начинают работать сразу, restart `wg` не нужен.
+
+Важно: папка `wg_confs` предназначена только для tunnel-конфигов сервера (`wg0.conf`). Клиентские конфиги Telegram-бота сохраняются в `bridge/clients/` и не должны помещаться в `wg_confs`.
 
 ## Переменные окружения для бота (`bridge/.env`)
 
@@ -36,7 +39,7 @@
 - `BOT_TOKEN`
 - `ADMIN_IDS`
 - `DATA_DIR=/data`
-- `WG_CONFIG_FILE=/config/wg0.conf`
+- `WG_CONFIG_FILE=/config/wg_confs/wg0.conf`
 - `CLIENTS_DIR=/clients`
 - `WG_INTERFACE=wg0`
 - `WG_ENDPOINT=<bridge-public-ip-or-dns>:51820`
@@ -92,8 +95,8 @@ AllowedIPs = 10.10.10.2/32
 
 Заполните:
 
-- `upstream/config/wg0.conf`
-- `bridge/config/wg0.conf`
+- `upstream/config/wg_confs/wg0.conf`
+- `bridge/config/wg_confs/wg0.conf`
 
 (замените плейсхолдеры на реальные значения).
 

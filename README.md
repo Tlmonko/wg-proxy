@@ -42,27 +42,16 @@ wg genkey | tee client_private.key   | wg pubkey > client_public.key
 
 Так ключи не теряются: после команды остаются файлы `*_private.key` и `*_public.key`.
 
-## Куда подставлять ключи
-
-### `upstream/config/wg0.conf`
-
-- `[UPSTREAM_PRIVATE_KEY]` ← содержимое `upstream_private.key`
-- `[BRIDGE_SERVER_PUBLIC_KEY]` ← содержимое `bridge_public.key`
-
-### `bridge/config/wg0.conf`
-
-- `[BRIDGE_PRIVATE_KEY]` ← содержимое `bridge_private.key`
-- `[PEER_PUBLIC_KEY]` ← содержимое `client_public.key`
-- `[UPSTREAM_SERVER_PUBLIC_KEY]` ← содержимое `upstream_public.key`
-
-### `bridge/clients/example.conf`
-
-- `[CLIENT_PRIVATE_KEY]` ← содержимое `client_private.key`
-- `[BRIDGE_PUBLIC_KEY]` ← содержимое `bridge_public.key`
-
-## Минимальный порядок действий
+## Порядок действий
 
 1. Сгенерировать 3 пары ключей командами выше.
-2. Заполнить шаблоны `wg0.conf` и `bridge/clients/example.conf` адресами, портом и ключами.
-3. Запустить сервисы.
+2. Заполнить шаблоны `upstream/config/wg0.conf`, `bridge/config/wg0.conf` и `bridge/clients/example.conf` адресами, портом и ключами.
+3. Запустить upstream:
+   ```bash
+   cd upstream && docker compose up -d
+   ```
+4. Запустить bridge:
+   ```bash
+   cd bridge && docker compose up -d
+   ```
 

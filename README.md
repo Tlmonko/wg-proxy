@@ -20,7 +20,7 @@
 
 - `upstream/config/wg0.conf`
 - `bridge/config/wg0.conf`
-- `bridge/clients/example.conf`
+- `bridge/clients/example.conf` — пример конфига клиента.
 
 Перед запуском нужно заменить плейсхолдеры (`[... ]`) на реальные значения: адреса, порт и ключи.
 
@@ -54,4 +54,5 @@ wg genkey | tee client_private.key   | wg pubkey > client_public.key
    ```bash
    cd bridge && docker compose up -d
    ```
+5. Подключить клиент, используя заполненный клиентский конфиг `bridge/clients/example.conf` (или его копию для конкретного клиента).
 

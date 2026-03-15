@@ -9,6 +9,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY requirements.txt ./
+# Includes Pillow via requirements.txt for robust QR PNG generation
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 

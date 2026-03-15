@@ -14,6 +14,7 @@
 - `bridge/config/wg_confs/` и `upstream/config/wg_confs/` — только серверные live tunnel configs WireGuard.
 - `bridge/bot-data/` — JSON-хранилище админов Telegram-бота.
 - `bridge/bot/` — минималистичный Telegram-бот управления managed-клиентами.
+- `bridge/bot/requirements.txt` включает `Pillow` для стабильной генерации QR-кодов в PNG.
 
 ## Telegram-бот (bridge)
 

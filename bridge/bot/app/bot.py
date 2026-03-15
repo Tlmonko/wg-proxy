@@ -4,17 +4,17 @@ import os
 import re
 import subprocess
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 from dotenv import load_dotenv
 
 from .admins import AdminStore
 from .config import Settings, load_settings
+from .qr import make_qr_png
 from .reload import ReloadError, reload_wireguard
 from .storage import atomic_write_text
 from .wg_config import WgConfigError, add_managed_client
-from .qr import make_qr_png
 
 CLIENT_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]{1,15}$')
 
@@ -174,8 +174,26 @@ async def main() -> None:
         if reload_ok:
             await message.answer('Пользователь добавлен и WireGuard конфиг применен.')
 
-        await message.answer_photo(BufferedInputFile(qr_bytes, filename=f'{client_name}.png'), caption=f'{client_name}: QR')
-        await message.answer_document(BufferedInputFile(conf_bytes, filename=f'wg0-client-{client_name}.conf'))
+        logger.info('Sending QR for %s to chat_id=%s', client_name, message.chat.id)
+        try:
+            await bot.send_photo(
+                chat_id=message.chat.id,
+                photo=BufferedInputFile(qr_bytes, filename=f'{client_name}.png'),
+                caption=f'{client_name}: QR',
+            )
+        except Exception as exc:
+            logger.exception('Failed to send QR for %s', client_name)
+            await message.answer(f'Не удалось отправить QR-код (ошибка: {exc}).')
+
+        logger.info('Sending client config for %s to chat_id=%s', client_name, message.chat.id)
+        try:
+            await bot.send_document(
+                chat_id=message.chat.id,
+                document=BufferedInputFile(conf_bytes, filename=f'wg0-client-{client_name}.conf'),
+            )
+        except Exception as exc:
+            logger.exception('Failed to send client config for %s', client_name)
+            await message.answer(f'Не удалось отправить конфигурационный файл (ошибка: {exc}).')
 
     await dp.start_polling(bot)
 

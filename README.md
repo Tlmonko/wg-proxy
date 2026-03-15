@@ -1,58 +1,152 @@
 # WG Proxy: доступ к upstream через bridge
 
-Этот репозиторий описывает схему WireGuard из трёх ролей:
+Репозиторий описывает схему WireGuard из трёх ролей:
 
-- **Клиент** — конечное устройство пользователя, которое подключается к VPN.
-- **Bridge сервер** — промежуточный сервер: доступен клиенту и одновременно имеет доступ к upstream.
-- **Upstream сервер** — сервер выхода в интернет; доступен bridge, но напрямую недоступен клиенту.
+- **Клиент** — устройство пользователя.
+- **Bridge сервер** — принимает клиентов и отправляет трафик в upstream.
+- **Upstream сервер** — точка выхода в интернет.
 
-## Как работает схема
+## Структура
 
-1. Клиент поднимает туннель до **bridge**.
-2. Bridge принимает трафик клиента и отправляет его дальше в туннель до **upstream**.
-3. Upstream выполняет NAT/маршрутизацию и выпускает трафик в интернет.
+- `upstream/` — docker-compose и `wg0.conf` для upstream.
+- `bridge/config/` — конфиг bridge WireGuard (`wg0.conf`).
+- `bridge/clients/` — клиентские `.conf`, создаваемые ботом.
+- `bridge/bot-data/` — JSON-хранилище админов Telegram-бота.
+- `bridge/bot/` — минималистичный Telegram-бот управления managed-клиентами.
 
-Идея: клиенту не нужен прямой доступ к upstream, весь путь строится через bridge.
+## Telegram-бот (bridge)
 
-## Шаблоны конфигураций
+Бот работает отдельным контейнером `wg-bot` и использует **long polling**.
 
-Используются следующие шаблоны WireGuard:
+Ключевая особенность этой реализации:
+
+1. бот изменяет `bridge/config/wg0.conf`;
+2. затем делает live reload без рестарта контейнера:
+   - `wg-quick strip <WG_CONFIG_FILE>`
+   - `wg syncconf <WG_INTERFACE> /dev/stdin`
+
+Новые пользователи начинают работать сразу, restart `wg` не нужен.
+
+## Переменные окружения для бота (`bridge/.env`)
+
+См. пример: `bridge/.env.example`.
+
+Обязательные/поддерживаемые:
+
+- `BOT_TOKEN`
+- `ADMIN_IDS`
+- `DATA_DIR=/data`
+- `WG_CONFIG_FILE=/config/wg0.conf`
+- `CLIENTS_DIR=/clients`
+- `WG_INTERFACE=wg0`
+- `WG_ENDPOINT=<bridge-public-ip-or-dns>:51820`
+- `WG_SERVER_PUBLIC_KEY=<bridge-public-key>`
+- `WG_SERVER_IPV4=10.10.10.1`
+- `WG_SERVER_CIDR=24`
+- `WG_ALLOWED_IPS=0.0.0.0/0`
+- `WG_DNS=1.1.1.1,1.0.0.1`
+- `TZ=Europe/Moscow`
+
+## Команды бота
+
+- `/start`
+- `/help`
+- `/add_admin @username`
+- `/admins`
+- `/add_user <client_name>`
+
+`/add_user` делает:
+
+1. генерацию ключей (`wg genkey`, `wg pubkey`, `wg genpsk`);
+2. добавление peer в managed-блок `wg0.conf`;
+3. live reload `wg syncconf`;
+4. сохранение `/clients/wg0-client-<client_name>.conf`;
+5. отправку QR + `.conf` в Telegram.
+
+Если reload не удался, бот явно сообщает об этом и пишет подробности в лог.
+
+## Managed-блок в `wg0.conf`
+
+Бот изменяет только managed-область:
+
+- `# BEGIN MANAGED CLIENTS`
+- `# END MANAGED CLIENTS`
+
+Формат клиента:
+
+```ini
+# BEGIN CLIENT alice
+### Client alice
+[Peer]
+PublicKey = <client_public_key>
+PresharedKey = <client_psk>
+AllowedIPs = 10.10.10.2/32
+# END CLIENT alice
+```
+
+Остальные peer'ы (upstream/ручные) не трогаются.
+
+## Как запустить
+
+### 1) Подготовить конфиги и ключи
+
+Заполните:
 
 - `upstream/config/wg0.conf`
 - `bridge/config/wg0.conf`
-- `bridge/clients/example.conf` — пример конфига клиента.
 
-Перед запуском нужно заменить плейсхолдеры (`[... ]`) на реальные значения: адреса, порт и ключи.
+(замените плейсхолдеры на реальные значения).
 
-## Генерация ключей (с сохранением в файлы)
-
-Сгенерируйте отдельные пары ключей для:
-
-- upstream сервера,
-- bridge сервера,
-- клиента.
-
-Рекомендуемая схема (приватный ключ сохраняется в файл, публичный — в отдельный файл):
+Сгенерируйте и сохраните ключи в файлы, чтобы потом подставить их в шаблоны `wg0.conf`:
 
 ```bash
 wg genkey | tee upstream_private.key | wg pubkey > upstream_public.key
 wg genkey | tee bridge_private.key   | wg pubkey > bridge_public.key
-wg genkey | tee client_private.key   | wg pubkey > client_public.key
 ```
 
-Так ключи не теряются: после команды остаются файлы `*_private.key` и `*_public.key`.
+При необходимости аналогично можно сгенерировать клиентскую пару:
 
-## Порядок действий
+```bash
+wg genkey | tee client_private.key | wg pubkey > client_public.key
+```
 
-1. Сгенерировать 3 пары ключей командами выше.
-2. Заполнить шаблоны `upstream/config/wg0.conf`, `bridge/config/wg0.conf` и `bridge/clients/example.conf` адресами, портом и ключами.
-3. Запустить upstream:
-   ```bash
-   cd upstream && docker compose up -d
-   ```
-4. Запустить bridge:
-   ```bash
-   cd bridge && docker compose up -d
-   ```
-5. Подключить клиент, используя заполненный клиентский конфиг `bridge/clients/example.conf` (или его копию для конкретного клиента).
+### 2) Поднять upstream
 
+```bash
+cd upstream
+docker compose up -d
+```
+
+### 3) Подготовить bridge env
+
+```bash
+cd ../bridge
+cp .env.example .env
+# отредактируйте .env
+```
+
+### 4) Поднять bridge + бота
+
+```bash
+docker compose up -d --build
+```
+
+### 5) Добавить администратора бота
+
+1. Один из `ADMIN_IDS` пишет `/add_admin @username`.
+2. Пользователь `@username` пишет боту `/start`.
+3. После этого он попадает в активные админы.
+
+Проверка:
+
+```text
+/admins
+```
+
+### 6) Создать пользователя WireGuard
+
+```text
+/add_user alice
+```
+
+Бот отправит QR и файл `wg0-client-alice.conf`.

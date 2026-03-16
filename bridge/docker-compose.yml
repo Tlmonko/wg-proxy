@@ -6,7 +6,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=Europe/London
+      - TZ=${TZ:-Europe/Moscow}
     cap_add:
       - SYS_MODULE
       - NET_ADMIN
@@ -15,6 +15,24 @@ services:
       - 51820:51820/tcp
     volumes:
       - ./config:/config
+      - ./clients:/clients
       - /lib/modules:/lib/modules
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
+
+  wg-bot:
+    build:
+      context: ./bot
+    container_name: wg-bot
+    restart: always
+    depends_on:
+      - wg
+    env_file:
+      - .env
+    volumes:
+      - ./config:/config
+      - ./clients:/clients
+      - ./bot-data:/data
+    network_mode: "service:wg"
+    cap_add:
+      - NET_ADMIN

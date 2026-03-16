@@ -165,7 +165,7 @@ async def main() -> None:
             await message.answer(f'Пользователь добавлен в файл, но reload WireGuard не удался: {exc}')
 
         client_config = render_client_config(settings, private_key, psk, add_result.client_ip)
-        client_path = os.path.join(settings.clients_dir, f'wg0-client-{client_name}.conf')
+        client_path = os.path.join(settings.clients_dir, f'wg_{client_name}.conf')
         atomic_write_text(client_path, client_config)
 
         qr_bytes = make_qr_png(client_config)
@@ -189,7 +189,7 @@ async def main() -> None:
         try:
             await bot.send_document(
                 chat_id=message.chat.id,
-                document=BufferedInputFile(conf_bytes, filename=f'wg0-client-{client_name}.conf'),
+                document=BufferedInputFile(conf_bytes, filename=f'wg_{client_name}.conf'),
             )
         except Exception as exc:
             logger.exception('Failed to send client config for %s', client_name)

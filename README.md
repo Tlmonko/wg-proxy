@@ -64,7 +64,7 @@
 1. генерацию ключей (`wg genkey`, `wg pubkey`, `wg genpsk`);
 2. добавление peer в managed-блок `wg0.conf`;
 3. live reload `wg syncconf`;
-4. сохранение `/clients/wg0-client-<client_name>.conf`;
+4. сохранение `/clients/wg_<client_name>.conf`;
 5. отправку QR + `.conf` в Telegram.
 
 Если reload не удался, бот явно сообщает об этом и пишет подробности в лог.
@@ -153,4 +153,4 @@ docker compose up -d --build
 /add_user alice
 ```
 
-Бот отправит QR и файл `wg0-client-alice.conf`.
+Бот отправит QR и файл `wg_alice.conf`.

@@ -72,7 +72,7 @@ def allocate_next_ip(server_ipv4: str, cidr: int, used_ips: set[str]) -> str:
     network = ipaddress.ip_network(f'{server_ipv4}/{cidr}', strict=False)
     server_ip = ipaddress.ip_address(server_ipv4)
     for host in network.hosts():
-        if int(host.packed[-1]) < 2:
+        if int(host.packed[-1]) < 5:
             continue
         if host == server_ip:
             continue

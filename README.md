@@ -84,7 +84,7 @@
 [Peer]
 PublicKey = <client_public_key>
 PresharedKey = <client_psk>
-AllowedIPs = 10.10.10.2/32
+AllowedIPs = 10.10.10.5/32
 # END CLIENT alice
 ```
 

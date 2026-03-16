@@ -1,6 +1,6 @@
 services:
   wg:
-    image: linuxserver/wireguard
+    image: linuxserver/wireguard:version-v1.0.20210914
     container_name: wg
     restart: always
     environment:
@@ -21,8 +21,7 @@ services:
       - net.ipv4.conf.all.src_valid_mark=1
 
   wg-bot:
-    build:
-      context: ./bot
+    image: ghcr.io/tlmonko/wg-proxy/wg-bot:latest
     container_name: wg-bot
     restart: always
     depends_on:

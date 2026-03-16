@@ -131,8 +131,10 @@ cp .env.example .env
 
 ### 4) Поднять bridge + бота (на bridge сервере)
 
+`wg-bot` запускается из образа, который собирается CI-пайплайном этого репозитория: `ghcr.io/tlmonko/wg-proxy/wg-bot:latest`.
+
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 ### 5) Добавить администратора бота

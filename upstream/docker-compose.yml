@@ -1,6 +1,6 @@
 services:
   wg:
-    image: linuxserver/wireguard
+    image: linuxserver/wireguard:version-v1.0.20210914
     container_name: wg
     restart: always
     environment:

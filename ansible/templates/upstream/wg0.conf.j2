@@ -1,0 +1,12 @@
+[Interface]
+Address = {{ upstream_wg_address }}
+ListenPort = {{ wg_listen_port }}
+PrivateKey = {{ upstream_private_key }}
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth+ -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
+
+[Peer]
+# bridge
+PublicKey = {{ bridge_public_key }}
+AllowedIPs = 10.10.10.0/24
+Endpoint = {{ bridge_public_ip_or_dns }}:{{ wg_listen_port }}

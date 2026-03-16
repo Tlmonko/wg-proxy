@@ -1,0 +1,21 @@
+services:
+  wg:
+    image: linuxserver/wireguard
+    container_name: wg
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ={{ wg_timezone }}
+    cap_add:
+      - SYS_MODULE
+      - NET_ADMIN
+    ports:
+      - {{ wg_listen_port }}:{{ wg_listen_port }}/udp
+      - {{ wg_listen_port }}:{{ wg_listen_port }}/tcp
+    volumes:
+      - ./config:/config
+      - /lib/modules:/lib/modules
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1

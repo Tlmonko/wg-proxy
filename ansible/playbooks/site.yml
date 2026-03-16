@@ -1,0 +1,21 @@
+---
+- name: Install Docker on all hosts
+  hosts: all
+  become: true
+  roles:
+    - role: docker
+      tags: [docker]
+
+- name: Deploy WireGuard upstream
+  hosts: upstream
+  become: true
+  roles:
+    - role: wg_upstream
+      tags: [upstream]
+
+- name: Deploy WireGuard bridge and bot
+  hosts: bridge
+  become: true
+  roles:
+    - role: wg_bridge
+      tags: [bridge]

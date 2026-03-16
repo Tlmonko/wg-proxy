@@ -21,7 +21,7 @@ services:
       - net.ipv4.conf.all.src_valid_mark=1
 
   wg-bot:
-    image: ${WG_BOT_IMAGE:-ghcr.io/your-org/wg-proxy-wg-bot:latest}
+    image: ghcr.io/tlmonko/wg-proxy/wg-bot:latest
     container_name: wg-bot
     restart: always
     depends_on:

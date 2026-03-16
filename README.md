@@ -50,7 +50,6 @@
 - `WG_ALLOWED_IPS=0.0.0.0/0`
 - `WG_DNS=1.1.1.1,1.0.0.1`
 - `TZ=Europe/Moscow`
-- `WG_BOT_IMAGE=ghcr.io/<github-org-or-user>/wg-proxy-wg-bot:latest`
 
 ## Команды бота
 
@@ -132,11 +131,7 @@ cp .env.example .env
 
 ### 4) Поднять bridge + бота (на bridge сервере)
 
-Перед запуском укажите в `bridge/.env` образ бота, который собран CI-пайплайном:
-
-```dotenv
-WG_BOT_IMAGE=ghcr.io/<github-org-or-user>/wg-proxy-wg-bot:latest
-```
+`wg-bot` запускается из образа, который собирается CI-пайплайном этого репозитория: `ghcr.io/tlmonko/wg-proxy/wg-bot:latest`.
 
 ```bash
 docker compose up -d

@@ -114,22 +114,22 @@ wg genkey | tee bridge_private.key   | wg pubkey > bridge_public.key
 wg genkey | tee client_private.key | wg pubkey > client_public.key
 ```
 
-### 2) Поднять upstream
+### 2) Поднять upstream (на upstream сервере)
 
 ```bash
 cd upstream
 docker compose up -d
 ```
 
-### 3) Подготовить bridge env
+### 3) Подготовить bridge env (на bridge сервере)
 
 ```bash
-cd ../bridge
+cd bridge
 cp .env.example .env
 # отредактируйте .env
 ```
 
-### 4) Поднять bridge + бота
+### 4) Поднять bridge + бота (на bridge сервере)
 
 ```bash
 docker compose up -d --build

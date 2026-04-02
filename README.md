@@ -8,8 +8,8 @@
 
 ## Структура
 
-- `upstream/` — docker-compose и серверный конфиг `config/wg_confs/wg0.conf` для upstream.
-- `bridge/config/` — серверный конфиг bridge WireGuard (`wg_confs/wg0.conf`).
+- `upstream/` — docker-compose и шаблон серверного конфига `config/wg_confs/wg0.conf.template` для upstream.
+- `bridge/config/` — шаблон серверного конфига bridge WireGuard (`wg_confs/wg0.conf.template`).
 - `bridge/clients/` — клиентские `.conf`, создаваемые ботом.
 - `bridge/config/wg_confs/` и `upstream/config/wg_confs/` — только серверные live tunnel configs WireGuard.
 - `bridge/bot-data/` — JSON-хранилище админов Telegram-бота.
@@ -30,7 +30,7 @@
 
 Новые пользователи начинают работать сразу, restart `wg` не нужен.
 
-Важно: папка `wg_confs` предназначена только для tunnel-конфигов сервера (`wg0.conf`). Клиентские конфиги Telegram-бота сохраняются в `bridge/clients/` и не должны помещаться в `wg_confs`.
+Важно: папка `wg_confs` предназначена только для tunnel-конфигов сервера (`wg0.conf`). В репозитории лежат шаблоны `wg0.conf.template`, их нужно переименовать перед запуском. Клиентские конфиги Telegram-бота сохраняются в `bridge/clients/` и не должны помещаться в `wg_confs`.
 
 
 ## Telegram MTProto-прокси на bridge (Telemt)
@@ -143,12 +143,19 @@ AllowedIPs = 10.10.10.5/32
 
 Заполните:
 
-- `upstream/config/wg_confs/wg0.conf`
-- `bridge/config/wg_confs/wg0.conf`
+- `upstream/config/wg_confs/wg0.conf.template`
+- `bridge/config/wg_confs/wg0.conf.template`
 
-(замените плейсхолдеры на реальные значения).
+Сначала переименуйте шаблоны в рабочие файлы:
 
-Сгенерируйте и сохраните ключи в файлы, чтобы потом подставить их в шаблоны `wg0.conf`:
+```bash
+cp upstream/config/wg_confs/wg0.conf.template upstream/config/wg_confs/wg0.conf
+cp bridge/config/wg_confs/wg0.conf.template bridge/config/wg_confs/wg0.conf
+```
+
+После этого заполните `wg0.conf` реальными значениями (замените плейсхолдеры).
+
+Сгенерируйте и сохраните ключи в файлы, чтобы потом подставить их в `wg0.conf`:
 
 ```bash
 wg genkey | tee upstream_private.key | wg pubkey > upstream_public.key

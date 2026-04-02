@@ -13,6 +13,7 @@ services:
     ports:
       - 51820:51820/udp
       - 51820:51820/tcp
+      - 8443:8443/tcp
     volumes:
       - ./config:/config
       - ./clients:/clients
@@ -35,3 +36,23 @@ services:
     network_mode: "service:wg"
     cap_add:
       - NET_ADMIN
+
+  telemt:
+    image: whn0thacked/telemt-docker:latest
+    container_name: telemt
+    restart: always
+    depends_on:
+      - wg
+    environment:
+      - RUST_LOG=${TELEMT_LOG_LEVEL:-info}
+    volumes:
+      - ./config/telemt.toml:/etc/telemt.toml:ro
+    network_mode: "service:wg"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=16m
+

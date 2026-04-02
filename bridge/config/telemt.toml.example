@@ -1,0 +1,31 @@
+show_link = ["user1"]
+
+[general]
+prefer_ipv6 = false
+fast_mode = true
+use_middle_proxy = false
+
+[general.modes]
+classic = false
+secure = false
+tls = true
+
+[server]
+port = 8443
+listen_addr_ipv4 = "0.0.0.0"
+listen_addr_ipv6 = "::"
+
+[censorship]
+tls_domain = "www.cloudflare.com"
+mask = true
+mask_port = 8443
+fake_cert_len = 2048
+
+[access.users]
+# 16 random bytes in hex, e.g. `openssl rand -hex 16`
+user1 = "CHANGE_ME_32_HEX_CHARS"
+
+[[upstreams]]
+type = "direct"
+enabled = true
+weight = 10

@@ -11,14 +11,14 @@ secure = false
 tls = true
 
 [server]
-port = 443
+port = 8443
 listen_addr_ipv4 = "0.0.0.0"
 listen_addr_ipv6 = "::"
 
 [censorship]
 tls_domain = "www.cloudflare.com"
 mask = true
-mask_port = 443
+mask_port = 8443
 fake_cert_len = 2048
 
 [access.users]

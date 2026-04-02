@@ -40,7 +40,7 @@
 Что добавлено:
 
 - сервис `telemt` в `bridge/docker-compose.yml`;
-- публикация `443/tcp` на сервисе `wg` (так как `telemt` работает в `network_mode: service:wg`);
+- публикация `8443/tcp` на сервисе `wg` (так как `telemt` работает в `network_mode: service:wg`);
 - шаблон конфига `bridge/config/telemt.toml.example`.
 
 Как включить:
@@ -58,7 +58,7 @@
    openssl rand -hex 16
    ```
 
-3. Укажите домен для маскировки в `censorship.tls_domain` (любой реальный HTTPS-домен, который отвечает по 443).
+3. Укажите домен для маскировки в `censorship.tls_domain` (любой реальный HTTPS-домен, который отвечает по 8443).
 
 4. Поднимите сервисы:
 
@@ -75,7 +75,7 @@
 Проверка, что bridge отвечает как реальный сайт (active probing тест):
 
 ```bash
-curl -v -I --resolve <tls_domain>:443:<bridge_public_ip> https://<tls_domain>/
+curl -v -I --resolve <tls_domain>:8443:<bridge_public_ip> https://<tls_domain>:8443/
 ```
 
 ## Переменные окружения для бота (`bridge/.env`)

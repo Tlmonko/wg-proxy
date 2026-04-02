@@ -13,7 +13,7 @@ services:
     ports:
       - 51820:51820/udp
       - 51820:51820/tcp
-      - 443:443/tcp
+      - 8443:8443/tcp
     volumes:
       - ./config:/config
       - ./clients:/clients

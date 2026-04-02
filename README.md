@@ -15,6 +15,7 @@
 - `bridge/bot-data/` — JSON-хранилище админов Telegram-бота.
 - `bridge/bot/` — минималистичный Telegram-бот управления managed-клиентами.
 - `bridge/bot/requirements.txt` включает `Pillow` для стабильной генерации QR-кодов в PNG.
+- `bridge/config/telemt.toml.example` — шаблон Telemt (MTProto TLS-прокси) для запуска на bridge.
 
 ## Telegram-бот (bridge)
 
@@ -30,6 +31,52 @@
 Новые пользователи начинают работать сразу, restart `wg` не нужен.
 
 Важно: папка `wg_confs` предназначена только для tunnel-конфигов сервера (`wg0.conf`). Клиентские конфиги Telegram-бота сохраняются в `bridge/clients/` и не должны помещаться в `wg_confs`.
+
+
+## Telegram MTProto-прокси на bridge (Telemt)
+
+По аналогии с WireGuard-схемой из этого репозитория, прокси запускается **на bridge**, но весь исходящий трафик уходит через upstream благодаря маршрутизации в `wg0.conf` (`AllowedIPs = 0.0.0.0/0` у peer upstream).
+
+Что добавлено:
+
+- сервис `telemt` в `bridge/docker-compose.yml`;
+- публикация `443/tcp` на сервисе `wg` (так как `telemt` работает в `network_mode: service:wg`);
+- шаблон конфига `bridge/config/telemt.toml.example`.
+
+Как включить:
+
+1. На bridge-сервере создайте конфиг Telemt из шаблона:
+
+   ```bash
+   cd bridge
+   cp config/telemt.toml.example config/telemt.toml
+   ```
+
+2. Сгенерируйте секрет и подставьте его в `config/telemt.toml` (поле `access.users.user1`):
+
+   ```bash
+   openssl rand -hex 16
+   ```
+
+3. Укажите домен для маскировки в `censorship.tls_domain` (любой реальный HTTPS-домен, который отвечает по 443).
+
+4. Поднимите сервисы:
+
+   ```bash
+   docker compose up -d
+   ```
+
+5. Получите ссылку для подключения Telegram из логов:
+
+   ```bash
+   docker compose logs telemt | grep "tg://proxy"
+   ```
+
+Проверка, что bridge отвечает как реальный сайт (active probing тест):
+
+```bash
+curl -v -I --resolve <tls_domain>:443:<bridge_public_ip> https://<tls_domain>/
+```
 
 ## Переменные окружения для бота (`bridge/.env`)
 

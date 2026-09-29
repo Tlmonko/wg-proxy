@@ -1,0 +1,8 @@
+[main]
+source-if = 0.0.0.0
+source-lport = 51821
+# wg is reachable by its Compose service name on the shared Docker network.
+target = wg:51820
+resolve-interval = 30
+key = [SAME_RANDOM_SECRET_ON_BOTH_SERVERS]
+masking = AUTO

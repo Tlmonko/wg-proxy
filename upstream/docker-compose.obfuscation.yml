@@ -1,0 +1,9 @@
+services:
+  wg-obfuscator:
+    image: clustermeerkat/wg-obfuscator:1.6
+    container_name: wg-obfuscator
+    restart: unless-stopped
+    ports:
+      - 51821:51821/udp
+    volumes:
+      - ./wg-obfuscator.conf:/etc/wg-obfuscator/wg-obfuscator.conf:ro

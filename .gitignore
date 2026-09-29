@@ -1,2 +1,8 @@
 .idea
 .idea/vcs.xml
+bridge/.env
+bridge/wg-obfuscator.conf
+upstream/wg-obfuscator.conf
+bridge/.obfuscation-state.json
+__pycache__/
+*.key

@@ -13,8 +13,7 @@ services:
     ports:
       - 51820:51820/udp
       - 51820:51820/tcp
-    expose:
-      - "9586"
+      - "${WG_EXPORTER_BIND_ADDRESS:-127.0.0.1}:9586:9586/tcp"
     volumes:
       - ./config:/config
       - ./clients:/clients
@@ -61,39 +60,3 @@ services:
       - "/monitoring/peer-names/wg0.conf"
       - "-d"
       - "true"
-
-  prometheus:
-    image: prom/prometheus:v3.14.0
-    container_name: wg-prometheus
-    restart: unless-stopped
-    depends_on:
-      - wg-exporter
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=90d"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-
-  grafana:
-    image: grafana/grafana:13.2.2
-    container_name: wg-grafana
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in bridge/.env}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SECURITY_DISABLE_GRAVATAR: "true"
-    ports:
-      - "${MONITORING_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-
-volumes:
-  prometheus-data:
-  grafana-data:

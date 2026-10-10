@@ -71,17 +71,25 @@
 
 ## Мониторинг WireGuard
 
-Bridge Compose также запускает WireGuard exporter, Prometheus и Grafana. Exporter читает статистику `wg0` в сетевом namespace контейнера `wg`; Prometheus хранит историю до 90 дней в Docker volume, а Grafana автоматически загружает дашборд `WireGuard Bridge`.
+Bridge Compose запускает WireGuard exporter, который читает статистику `wg0` в сетевом namespace контейнера `wg` и отдаёт метрики по HTTP на порту `9586` (`/metrics`). Хранение метрик и визуализация остаются в существующем инстансе VictoriaMetrics.
 
-Перед запуском задайте в `bridge/.env` непредсказуемый пароль `GRAFANA_ADMIN_PASSWORD`; переменная добавлена в `.env.example` пустой, поэтому Compose не запустит стек, пока пароль не задан. По умолчанию Grafana опубликована только на `127.0.0.1:3000`, exporter и Prometheus не публикуют порты на хост. Для открытия Grafana с локального компьютера используйте SSH-туннель:
+По умолчанию endpoint доступен только локально на bridge (`127.0.0.1:9586`). Чтобы VictoriaMetrics на другом сервере могла его опрашивать, задайте в `bridge/.env` `WG_EXPORTER_BIND_ADDRESS` равным приватному IP bridge, доступному с VM. Разрешите входящий TCP-порт `9586` в firewall только с IP-адреса VictoriaMetrics: exporter не добавляет аутентификацию, а метрики содержат peer labels.
 
 ```bash
-ssh -L 3000:127.0.0.1:3000 <user>@<bridge-host>
+curl http://127.0.0.1:9586/metrics
 ```
 
-После этого откройте `http://127.0.0.1:3000`. Чтобы изменить адрес или порт Grafana, задайте `MONITORING_BIND_ADDRESS` и `GRAFANA_PORT` в `bridge/.env`; перед публикацией на внешнем интерфейсе настройте firewall или reverse proxy.
+В конфигурации VictoriaMetrics добавьте scrape job, подставив приватный IP bridge:
 
-Дашборд показывает текущую скорость по каждому managed-клиенту, объём трафика за выбранный период и давность handshake. Имена для exporter формирует бот в отдельном файле только с публичными ключами и именами — приватный ключ и preshared keys ему не монтируются. При добавлении клиента список обновляется автоматически.
+```yaml
+scrape_configs:
+  - job_name: wireguard
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["<bridge-private-ip>:9586"]
+```
+
+Имена для exporter формирует бот в отдельном файле только с публичными ключами и именами — приватный ключ и preshared keys ему не монтируются. При добавлении клиента список обновляется автоматически.
 
 На bridge счётчики показывают обмен трафиком каждого клиента с bridge. Upstream видит bridge как один peer, поэтому его счётчики не позволяют разбить трафик по конечным клиентам. Давность handshake отражает последний обмен WireGuard-пакетами и не гарантирует, что молчащий клиент отключён.
 

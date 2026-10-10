@@ -9,6 +9,7 @@ class Settings:
     data_dir: str
     admins_file: str
     wg_config_file: str
+    wg_peer_names_file: str
     clients_dir: str
     wg_interface: str
     wg_endpoint: str
@@ -38,6 +39,7 @@ def load_settings() -> Settings:
         data_dir=os.getenv('DATA_DIR', '/data'),
         admins_file=os.path.join(os.getenv('DATA_DIR', '/data'), 'admins.json'),
         wg_config_file=os.getenv('WG_CONFIG_FILE', '/config/wg_confs/wg0.conf'),
+        wg_peer_names_file=os.getenv('WG_PEER_NAMES_FILE', '/monitoring/peer-names/wg0.conf'),
         clients_dir=os.getenv('CLIENTS_DIR', '/clients'),
         wg_interface=os.getenv('WG_INTERFACE', 'wg0'),
         wg_endpoint=os.environ['WG_ENDPOINT'],

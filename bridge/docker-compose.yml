@@ -13,6 +13,8 @@ services:
     ports:
       - 51820:51820/udp
       - 51820:51820/tcp
+    expose:
+      - "9586"
     volumes:
       - ./config:/config
       - ./clients:/clients
@@ -32,6 +34,66 @@ services:
       - ./config:/config
       - ./clients:/clients
       - ./bot-data:/data
+      - ./monitoring/peer-names:/monitoring/peer-names
     network_mode: "service:wg"
     cap_add:
       - NET_ADMIN
+    environment:
+      - WG_PEER_NAMES_FILE=/monitoring/peer-names/wg0.conf
+
+  wg-exporter:
+    image: mindflavor/prometheus-wireguard-exporter:3.6.6
+    container_name: wg-exporter
+    restart: unless-stopped
+    depends_on:
+      - wg
+    network_mode: "service:wg"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./monitoring/peer-names:/monitoring/peer-names:ro
+    command:
+      - "-a"
+      - "true"
+      - "-i"
+      - "${WG_INTERFACE:-wg0}"
+      - "-n"
+      - "/monitoring/peer-names/wg0.conf"
+      - "-d"
+      - "true"
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: wg-prometheus
+    restart: unless-stopped
+    depends_on:
+      - wg-exporter
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=90d"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    container_name: wg-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in bridge/.env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+    ports:
+      - "${MONITORING_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  prometheus-data:
+  grafana-data:

@@ -17,11 +17,12 @@ def file_lock(lock_path: str):
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def atomic_write_text(path: str, content: str) -> None:
+def atomic_write_text(path: str, content: str, mode: int = 0o600) -> None:
     directory = os.path.dirname(path)
     os.makedirs(directory, exist_ok=True)
     fd, tmp_path = tempfile.mkstemp(prefix='.tmp-', dir=directory, text=True)
     try:
+        os.fchmod(fd, mode)
         with os.fdopen(fd, 'w', encoding='utf-8') as tmp_file:
             tmp_file.write(content)
             tmp_file.flush()

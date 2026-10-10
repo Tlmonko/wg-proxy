@@ -68,6 +68,33 @@ def parse_managed_clients(config_text: str) -> list[ManagedClient]:
     return clients
 
 
+def sync_managed_peer_names(config_path: str, peer_names_path: str) -> None:
+    """Write a public-key/name-only WireGuard config for the metrics exporter."""
+    lock_path = f'{config_path}.lock'
+    with file_lock(lock_path):
+        if not os.path.exists(config_path):
+            raise WgConfigError(f'Не найден конфиг WireGuard: {config_path}')
+
+        clients = parse_managed_clients(_read_text(config_path))
+        blocks = [
+            '\n'.join(
+                (
+                    '[Peer]',
+                    f'# friendly_name = {client.name}',
+                    f'PublicKey = {client.public_key}',
+                    f'AllowedIPs = {client.allowed_ip}',
+                )
+            )
+            for client in clients
+        ]
+        content = '\n\n'.join(blocks)
+        if content:
+            content += '\n'
+        else:
+            content = '# Generated from managed WireGuard clients by wg-bot.\n'
+        atomic_write_text(peer_names_path, content, mode=0o644)
+
+
 def allocate_next_ip(server_ipv4: str, cidr: int, used_ips: set[str]) -> str:
     network = ipaddress.ip_network(f'{server_ipv4}/{cidr}', strict=False)
     server_ip = ipaddress.ip_address(server_ipv4)

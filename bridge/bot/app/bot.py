@@ -14,7 +14,7 @@ from .config import Settings, load_settings
 from .qr import make_qr_png
 from .reload import ReloadError, reload_wireguard
 from .storage import atomic_write_text
-from .wg_config import WgConfigError, add_managed_client
+from .wg_config import WgConfigError, add_managed_client, sync_managed_peer_names
 
 CLIENT_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]{1,15}$')
 
@@ -75,6 +75,11 @@ async def main() -> None:
     settings = load_settings()
     os.makedirs(settings.clients_dir, exist_ok=True)
     os.makedirs(settings.data_dir, exist_ok=True)
+
+    try:
+        sync_managed_peer_names(settings.wg_config_file, settings.wg_peer_names_file)
+    except (OSError, WgConfigError):
+        logger.exception('Failed to synchronize WireGuard peer names for monitoring')
 
     admin_store = AdminStore(settings.admins_file)
 
@@ -155,6 +160,11 @@ async def main() -> None:
             logger.exception('Failed to prepare user %s', client_name)
             await message.answer(f'Не удалось добавить пользователя: {exc}')
             return
+
+        try:
+            sync_managed_peer_names(settings.wg_config_file, settings.wg_peer_names_file)
+        except (OSError, WgConfigError):
+            logger.exception('Failed to synchronize WireGuard peer names for monitoring')
 
         reload_ok = True
         try:

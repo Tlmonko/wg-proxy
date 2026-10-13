@@ -69,6 +69,30 @@
 
 Если reload не удался, бот явно сообщает об этом и пишет подробности в лог.
 
+## Мониторинг WireGuard
+
+Bridge Compose запускает WireGuard exporter, который читает статистику `wg0` в сетевом namespace контейнера `wg` и отдаёт метрики по HTTP на порту `9586` (`/metrics`). Хранение метрик и визуализация остаются в существующем инстансе VictoriaMetrics.
+
+По умолчанию endpoint доступен только локально на bridge (`127.0.0.1:9586`). Чтобы VictoriaMetrics на другом сервере могла его опрашивать, задайте в `bridge/.env` `WG_EXPORTER_BIND_ADDRESS` равным приватному IP bridge, доступному с VM. Разрешите входящий TCP-порт `9586` в firewall только с IP-адреса VictoriaMetrics: exporter не добавляет аутентификацию, а метрики содержат peer labels.
+
+```bash
+curl http://127.0.0.1:9586/metrics
+```
+
+В конфигурации VictoriaMetrics добавьте scrape job, подставив приватный IP bridge:
+
+```yaml
+scrape_configs:
+  - job_name: wireguard
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["<bridge-private-ip>:9586"]
+```
+
+Имена для exporter формирует бот в отдельном файле только с публичными ключами и именами — приватный ключ и preshared keys ему не монтируются. При добавлении клиента список обновляется автоматически.
+
+На bridge счётчики показывают обмен трафиком каждого клиента с bridge. Upstream видит bridge как один peer, поэтому его счётчики не позволяют разбить трафик по конечным клиентам. Давность handshake отражает последний обмен WireGuard-пакетами и не гарантирует, что молчащий клиент отключён.
+
 ## Managed-блок в `wg0.conf`
 
 Бот изменяет только managed-область:
@@ -134,6 +158,7 @@ cp .env.example .env
 `wg-bot` запускается из образа, который собирается CI-пайплайном этого репозитория: `ghcr.io/tlmonko/wg-proxy/wg-bot:latest`.
 
 ```bash
+docker compose pull wg-bot
 docker compose up -d
 ```
 

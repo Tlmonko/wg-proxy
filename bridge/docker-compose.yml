@@ -13,6 +13,7 @@ services:
     ports:
       - 51820:51820/udp
       - 51820:51820/tcp
+      - "${WG_EXPORTER_BIND_ADDRESS:-127.0.0.1}:9586:9586/tcp"
     volumes:
       - ./config:/config
       - ./clients:/clients
@@ -32,6 +33,30 @@ services:
       - ./config:/config
       - ./clients:/clients
       - ./bot-data:/data
+      - ./monitoring/peer-names:/monitoring/peer-names
     network_mode: "service:wg"
     cap_add:
       - NET_ADMIN
+    environment:
+      - WG_PEER_NAMES_FILE=/monitoring/peer-names/wg0.conf
+
+  wg-exporter:
+    image: mindflavor/prometheus-wireguard-exporter:3.6.6
+    container_name: wg-exporter
+    restart: unless-stopped
+    depends_on:
+      - wg
+    network_mode: "service:wg"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./monitoring/peer-names:/monitoring/peer-names:ro
+    command:
+      - "-a"
+      - "true"
+      - "-i"
+      - "${WG_INTERFACE:-wg0}"
+      - "-n"
+      - "/monitoring/peer-names/wg0.conf"
+      - "-d"
+      - "true"

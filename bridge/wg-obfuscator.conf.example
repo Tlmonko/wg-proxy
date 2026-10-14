@@ -1,0 +1,9 @@
+[main]
+# Loopback is shared with the bridge WireGuard container.
+source-if = 127.0.0.1
+source-lport = 51821
+target = [UPSTREAM_PUBLIC_IPV4]:51821
+key = [SAME_RANDOM_SECRET_ON_BOTH_SERVERS]
+masking = STUN
+# The switch script replaces this with the active WireGuard fwmark.
+fwmark = [CURRENT_WG_FWMARK]

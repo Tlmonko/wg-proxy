@@ -6,6 +6,14 @@
 - **Bridge сервер** — принимает клиентов и отправляет трафик в upstream.
 - **Upstream сервер** — точка выхода в интернет.
 
+Для канала bridge ↔ upstream можно включить [wg-obfuscator](https://github.com/ClusterM/wg-obfuscator) на обеих сторонах. Обычный запуск `docker compose up -d` сохраняет прямое соединение. Клиенты по-прежнему подключаются к bridge обычным WireGuard.
+
+```text
+клиент --WG/UDP 51820--> bridge WG --локальный UDP--> bridge obfuscator
+    --обфусцированный STUN/UDP 51821--> upstream obfuscator
+    --локальный UDP--> upstream WG 51820
+```
+
 ## Структура
 
 - `upstream/` — docker-compose и серверный конфиг `config/wg_confs/wg0.conf` для upstream.
@@ -15,6 +23,46 @@
 - `bridge/bot-data/` — JSON-хранилище админов Telegram-бота.
 - `bridge/bot/` — минималистичный Telegram-бот управления managed-клиентами.
 - `bridge/bot/requirements.txt` включает `Pillow` для стабильной генерации QR-кодов в PNG.
+- `bridge/wg-obfuscator.conf.example` и `upstream/wg-obfuscator.conf.example` — шаблоны обфускаторов. Рабочие `.conf` хранят общий секрет и исключены из Git.
+- `*/docker-compose.obfuscation.yml` — дополнительные Compose-файлы для включения обфускаторов.
+- `bridge/switch_upstream.py` — переключение активного upstream peer и откат одной командой на bridge.
+
+## Обфускация bridge ↔ upstream
+
+Обфускаторы используют образ `clustermeerkat/wg-obfuscator:1.6`. На upstream дополнительный контейнер слушает UDP `51821` и пересылает пакеты на существующий WG-контейнер `wg:51820` в той же Docker-сети. На bridge обфускатор делит сетевое пространство с `wg` и слушает только `127.0.0.1:51821`. Базовые Compose-файлы, публичный WG-порт upstream `51820` и клиентский порт bridge `51820` при подготовке не меняются.
+
+### Переход с работающей связки
+
+1. На обоих серверах скопируйте соответствующий `wg-obfuscator.conf.example` в `wg-obfuscator.conf`. Сгенерируйте общий секрет, например `openssl rand -hex 32`, впишите **одно и то же значение** вместо `[SAME_RANDOM_SECRET_ON_BOTH_SERVERS]` и установите `chmod 600 wg-obfuscator.conf`. На bridge также замените `[UPSTREAM_PUBLIC_IPV4]` на внешний IPv4 upstream. Поле `fwmark` на bridge заполнит переключатель из работающего `wg0`.
+2. На upstream откройте UDP `51821` в сетевом экране и запустите только новый контейнер, не пересоздавая WG:
+
+   ```bash
+   cd upstream
+   docker compose -f docker-compose.yml -f docker-compose.obfuscation.yml up -d --no-deps wg-obfuscator
+   docker compose -f docker-compose.yml -f docker-compose.obfuscation.yml logs wg-obfuscator
+   ```
+
+3. На bridge запустите переключатель. Ему нужны Python 3 и Docker Compose на хосте. Он сохранит прямой `Endpoint` в `bridge/.obfuscation-state.json`, сверит активный `FwMark`, запустит локальный обфускатор, изменит `wg0.conf` под блокировкой, общей с Telegram-ботом, и применит `wg set` без перезапуска интерфейса. В `wg0.conf` он меняет только `Endpoint` и `PersistentKeepalive` upstream peer, а также `FwMark` интерфейса; ручные peer и весь managed-блок клиентов сохраняются:
+
+   ```bash
+   cd bridge
+   python3 switch_upstream.py obfuscated
+   ```
+
+4. Проверьте `docker compose exec wg wg show wg0` на обоих серверах, появление handshake после трафика и логи обфускаторов. Статус сохранённого режима на bridge: `python3 switch_upstream.py status`.
+
+### Откат
+
+Пока upstream по-прежнему принимает прямой UDP `51820`, достаточно **одной команды на bridge**:
+
+```bash
+cd bridge
+python3 switch_upstream.py direct
+```
+
+Команда восстановит сохранённый `Endpoint` в файле и активном peer через `wg set`; WG и бот не перезапускаются. Контейнеры обфускатора могут остаться запущенными для повторной попытки. Файл `.obfuscation-state.json` нужен для отката: сохраните его вместе с локальными настройками bridge, не удаляйте вручную в режиме обфускации.
+
+Переключение не требует рестарта WG, поэтому клиентские соединения и бот остаются запущенными. **Нулевой перерыв не гарантирован**: до следующего handshake/переподключения канала возможна краткая пауза. При долгой паузе выполните откат. В период проверки прямой порт upstream остаётся доступен; это сознательный резервный путь. Если позже закрыть UDP `51820` upstream ради строгого запрета прямого соединения, откат одной командой перестанет работать, пока этот порт не будет открыт снова. Если есть потери пакетов, уменьшите WG `MTU`: STUN-маскировка добавляет байты. Обфускация не заменяет шифрование WireGuard.
 
 ## Telegram-бот (bridge)
 
@@ -124,6 +172,8 @@ AllowedIPs = 10.10.10.5/32
 - `bridge/config/wg_confs/wg0.conf`
 
 (замените плейсхолдеры на реальные значения).
+
+Для первого запуска обфускатор не требуется. Его можно подготовить позже по разделу выше.
 
 Сгенерируйте и сохраните ключи в файлы, чтобы потом подставить их в шаблоны `wg0.conf`:
 

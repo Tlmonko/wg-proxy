@@ -1,0 +1,10 @@
+services:
+  wg-obfuscator:
+    image: clustermeerkat/wg-obfuscator:1.6
+    container_name: wg-obfuscator
+    restart: unless-stopped
+    network_mode: "service:wg"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./wg-obfuscator.conf:/etc/wg-obfuscator/wg-obfuscator.conf:ro

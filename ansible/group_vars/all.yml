@@ -1,0 +1,24 @@
+---
+# Common
+wg_project_root: /opt/wg-proxy
+wg_timezone: Europe/Moscow
+wg_listen_port: 51820
+
+# Shared between upstream and bridge
+upstream_public_key: ""
+bridge_public_key: ""
+upstream_endpoint_host: ""
+
+# Bot settings
+bot_token: ""
+bot_admin_ids: []
+bot_wg_allowed_ips: 0.0.0.0/0
+bot_wg_dns: 1.1.1.1,1.0.0.1
+bot_data_dir: /data
+bot_wg_interface: wg0
+
+# Derived vars (do not duplicate manually)
+bot_wg_endpoint: "{{ bridge_public_ip_or_dns }}:{{ wg_listen_port }}"
+bot_wg_server_public_key: "{{ bridge_public_key }}"
+bot_wg_server_ipv4: "{{ bridge_wg_address.split('/')[0] }}"
+bot_wg_server_cidr: "{{ bridge_wg_address.split('/')[1] }}"

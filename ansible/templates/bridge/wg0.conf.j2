@@ -1,0 +1,21 @@
+[Interface]
+Address = {{ bridge_wg_address }}
+ListenPort = {{ wg_listen_port }}
+PrivateKey = {{ bridge_private_key }}
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth+ -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth+ -j MASQUERADE
+
+{% for peer in bridge_manual_peers %}[Peer]
+{% if peer.comment is defined and peer.comment %}# {{ peer.comment }}
+{% endif %}PublicKey = {{ peer.public_key }}
+AllowedIPs = {{ peer.allowed_ips }}
+{% if peer.preshared_key is defined and peer.preshared_key %}PresharedKey = {{ peer.preshared_key }}
+{% endif %}
+{% endfor %}# upstream
+[Peer]
+PublicKey = {{ upstream_public_key }}
+AllowedIPs = 0.0.0.0/0
+Endpoint = {{ upstream_endpoint_host }}:{{ wg_listen_port }}
+
+# BEGIN MANAGED CLIENTS
+# END MANAGED CLIENTS

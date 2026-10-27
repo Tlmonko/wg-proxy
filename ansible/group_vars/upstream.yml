@@ -1,0 +1,4 @@
+---
+upstream_public_ip: ""
+upstream_wg_address: 10.10.10.254/24
+upstream_private_key: ""

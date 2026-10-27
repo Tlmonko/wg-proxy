@@ -1,0 +1,42 @@
+---
+- name: Validate upstream variables
+  ansible.builtin.assert:
+    that:
+      - wg_project_root | length > 0
+      - wg_listen_port | int > 0
+      - upstream_wg_address | length > 0
+      - upstream_private_key | length > 0
+      - bridge_public_key | length > 0
+      - bridge_public_ip_or_dns | length > 0
+    fail_msg: "Fill required upstream and shared variables in group_vars before deploy."
+
+- name: Ensure upstream project directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ wg_project_root }}"
+    - "{{ wg_project_root }}/upstream"
+    - "{{ wg_project_root }}/upstream/config"
+    - "{{ wg_project_root }}/upstream/config/wg_confs"
+
+- name: Render upstream docker-compose
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../templates/upstream/docker-compose.yml.j2"
+    dest: "{{ wg_project_root }}/upstream/docker-compose.yml"
+    mode: "0644"
+  notify: Compose up upstream
+
+- name: Render upstream WireGuard config
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../templates/upstream/wg0.conf.j2"
+    dest: "{{ wg_project_root }}/upstream/config/wg_confs/wg0.conf"
+    mode: "0600"
+  notify: Compose up upstream
+
+- name: Ensure upstream stack is running
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ wg_project_root }}/upstream"
+  changed_when: false

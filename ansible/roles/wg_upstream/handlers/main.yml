@@ -1,0 +1,5 @@
+---
+- name: Compose up upstream
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ wg_project_root }}/upstream"

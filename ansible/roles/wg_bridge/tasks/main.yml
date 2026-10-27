@@ -1,0 +1,62 @@
+---
+- name: Validate bridge and bot variables
+  ansible.builtin.assert:
+    that:
+      - wg_project_root | length > 0
+      - wg_listen_port | int > 0
+      - bridge_public_ip_or_dns | length > 0
+      - bridge_wg_address | length > 0
+      - bridge_private_key | length > 0
+      - upstream_public_key | length > 0
+      - upstream_endpoint_host | length > 0
+      - bot_token | length > 0
+      - bot_admin_ids | length > 0
+    fail_msg: "Fill required bridge, shared, and bot variables in group_vars before deploy."
+
+- name: Ensure bridge project directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ wg_project_root }}"
+    - "{{ wg_project_root }}/bridge"
+    - "{{ wg_project_root }}/bridge/config"
+    - "{{ wg_project_root }}/bridge/config/wg_confs"
+    - "{{ wg_project_root }}/bridge/clients"
+    - "{{ wg_project_root }}/bridge/bot-data"
+    - "{{ wg_project_root }}/bridge/bot"
+
+- name: Copy bridge bot sources
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../bridge/bot/"
+    dest: "{{ wg_project_root }}/bridge/bot/"
+    mode: preserve
+  notify: Compose up bridge with build
+
+- name: Render bridge docker-compose
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../templates/bridge/docker-compose.yml.j2"
+    dest: "{{ wg_project_root }}/bridge/docker-compose.yml"
+    mode: "0644"
+  notify: Compose up bridge with build
+
+- name: Render bridge WireGuard config
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../templates/bridge/wg0.conf.j2"
+    dest: "{{ wg_project_root }}/bridge/config/wg_confs/wg0.conf"
+    mode: "0600"
+  notify: Compose up bridge with build
+
+- name: Render bridge bot env file
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/../templates/bridge/.env.j2"
+    dest: "{{ wg_project_root }}/bridge/.env"
+    mode: "0600"
+  notify: Compose up bridge with build
+
+- name: Ensure bridge stack is running
+  ansible.builtin.command: docker compose up -d --build
+  args:
+    chdir: "{{ wg_project_root }}/bridge"
+  changed_when: false

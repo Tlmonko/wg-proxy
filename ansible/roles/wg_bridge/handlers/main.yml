@@ -1,0 +1,5 @@
+---
+- name: Compose up bridge with build
+  ansible.builtin.command: docker compose up -d --build
+  args:
+    chdir: "{{ wg_project_root }}/bridge"

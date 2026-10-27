@@ -1,0 +1,12 @@
+---
+bridge_public_ip_or_dns: ""
+bridge_wg_address: 10.10.10.1/24
+bridge_private_key: ""
+
+bridge_manual_peers: []
+# Example:
+# bridge_manual_peers:
+#   - comment: office-router
+#     public_key: BASE64_PUBLIC_KEY
+#     allowed_ips: 10.10.10.4/32
+#     preshared_key: OPTIONAL_BASE64_PSK

@@ -15,6 +15,21 @@
 - `bridge/bot-data/` — JSON-хранилище админов Telegram-бота.
 - `bridge/bot/` — минималистичный Telegram-бот управления managed-клиентами.
 - `bridge/bot/requirements.txt` включает `Pillow` для стабильной генерации QR-кодов в PNG.
+- `dashboard/` — веб-статус-страница туннеля (React, без бека; читает VictoriaMetrics напрямую).
+
+## Дашборд
+
+`dashboard/` — статус-страница (топология clients → bridge → upstream, throughput,
+handshake, таблица пиров). Чистый фронтенд: браузер сам ходит в VictoriaMetrics
+(лейблы `friendly_name` от wg-bot). Развёртывание:
+
+```sh
+cd dashboard
+npm install && npm run build
+docker build -t wg-dashboard . && docker run -d -p 8080:80 wg-dashboard
+```
+
+Подробности — `dashboard/README.md`.
 
 ## Telegram-бот (bridge)
 

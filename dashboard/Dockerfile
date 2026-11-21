@@ -1,5 +1,7 @@
 # build
 FROM node:22-alpine AS build
+ARG VITE_VM_URL=""
+ENV VITE_VM_URL=$VITE_VM_URL
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci || npm install

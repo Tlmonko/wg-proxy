@@ -1,0 +1,27 @@
+name: Deploy dashboard to NAS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard/**'
+      - '.github/workflows/deploy-dashboard.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dashboard
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify deploy
+        run: |
+          resp="$(curl -sS -m 30 -X POST \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_KEY }}" \
+            -H 'Content-Type: application/json' \
+            https://coolify.timonko.ru/api/v1/applications/${{ secrets.COOLIFY_APP_UUID }}/start)"
+          echo "coolify: $resp"
+          echo "$resp" | grep -q 'Deployment request queued' \
+            || { echo '::error::Coolify did not queue the deployment'; exit 1; }
